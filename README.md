@@ -1,2 +1,2 @@
 # argo-assignment
-argo-assignment simple CI 
+abra-assignment simple CI 
