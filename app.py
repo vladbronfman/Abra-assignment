@@ -1,10 +1,11 @@
-# grabbed from kodekloud/webapp-color 
-from flask import Flask
+# grabbed from kodekloud/webapp-color
+from flask import Flask, jsonify
 from flask import render_template
 import socket
 import random
 import os
 import argparse
+
 
 app = Flask(__name__)
 
@@ -31,6 +32,13 @@ def main():
     return render_template('hello.html', name=socket.gethostname(), color=color_codes[COLOR])
 
 
+
+
+@app.route('/hello')
+def index():
+    return jsonify({'hello': 'world'})
+
+
 if __name__ == "__main__":
 
     print(" This is a sample web application that displays a colored background. \n"
@@ -42,6 +50,8 @@ if __name__ == "__main__":
           " Note: Command line argument precedes over environment variable.\n"
           "\n"
           "")
+
+
 
     # Check for Command Line Parameters for color
     parser = argparse.ArgumentParser()
@@ -66,3 +76,4 @@ if __name__ == "__main__":
 
     # Run Flask Application
     app.run(host="0.0.0.0", port=8080)
+                                                          
