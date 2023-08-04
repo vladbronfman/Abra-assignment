@@ -1,0 +1,121 @@
+// Uses Declarative syntax to run commands inside a container.
+pipeline {
+    agent {
+        kubernetes {
+            // Rather than inline YAML, in a multibranch Pipeline you could use: yamlFile 'jenkins-pod.yaml'
+            // Or, to avoid YAML:
+            // containerTemplate {
+            //     name 'shell'
+            //     image 'ubuntu'
+            //     command 'sleep'
+            //     args 'infinity'
+            // }
+            yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: shell
+    image: ubuntu
+    command:
+    - sleep
+    args:
+    - infinity
+'''
+            // Can also wrap individual steps:
+            // container('shell') {
+            //     sh 'hostname'
+            // }
+            defaultContainer 'shell'
+        }
+    }
+        
+    environment {
+        registry = "ashishmj/python-jenkins" //To push an image to Docker Hub, you must first name your local image using your Docker Hub username and the repository name that you created through Docker Hub on the web.
+        registryCredential = 'DOCKERHUB'
+        githubCredential = 'GITHUB'
+    }    
+        
+    stages {
+            stage('checkout') {
+                steps {
+                git branch: 'develop',
+                credentialsId: githubCredential,
+                url: 'https://github.com/vladbronfman/abra-assignment.git'
+                }
+        }
+        
+        
+        stage('Container'){
+            steps{
+                script {
+                    def label = "mypod-${UUID.randomUUID().toString()}"
+
+podTemplate(label: label, containers: [
+    containerTemplate(name: 'python', image: 'python:3.7-alpine', ttyEnabled: true, command: 'cat'),
+]) {
+    node(label) {
+        stage('Get a Python project') {
+            git branch: 'develop', 
+                url: 'https://github.com/vladbronfman/abra-assignment.git',
+                changelog: false
+            container('python') {
+                stage('Flake test') {
+                     sh """ python3 -m pip install flake8 || echo Failed to install flake8 ;               """  
+                     script {
+                     def out = sh(returnStdout: true, script: 'flake8 app.py || echo Flak finished with errors')
+                     echo "Output: '${out}'"
+                    }
+                }
+            }
+        }
+    }
+}
+                }
+                
+                
+            }
+        }
+        
+        
+        
+        stage(' Code format') {
+            steps {
+// https://devops.stackexchange.com/questions/4557/jenkins-node-image-at-kubernetes-plugin   
+            container('shell') {
+                
+                    sh """ python3 -m pip install flake8 && flake8 app.py;
+                echo Hoho;
+                """
+            }                
+            }
+        }
+        
+         
+        
+        stage(' Code lint') {
+            steps {
+
+                sh 'pylint your_file.py'
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                sh 'python3 '
+                sh 'python3 -m pytest'
+            }
+        }
+        
+        
+        stage ('Clean Up'){
+           steps{
+                sh 'echo clean up'
+           }
+        }   
+    }
+}
+
+
+
+
