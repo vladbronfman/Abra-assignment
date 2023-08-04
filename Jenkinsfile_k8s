@@ -76,8 +76,8 @@ spec:
                                     }
                     
                                     stage('Test') {
-                                        ssh """ pip install pytest  || echo Failed to install pylint ;               """ 
-                                        def out = sh(returnStdout: true, script: 'python3 -m pytest || echo pylint finished with errors')
+                                        ssh """ python3 -m pip install  pytest  || echo Failed to install pytest ;               """ 
+                                        def out = sh(returnStdout: true, script: 'python3 -m pytest || echo pytest finished with errors')
                                          echo "Output: '${out}'"
                                 
                                     }
@@ -101,7 +101,20 @@ spec:
                     }
                 }
             }
-        
+
+            stage('Docker image test') {
+                steps {
+                    script {
+                        img = registry + ":${env.BUILD_ID}"
+                        docker.image('').withRun(' -p 78080:8080') { c ->
+                        /* Add wait to service is up */
+                        sh 'sleep 3; '
+                        /* Run curl test */
+                        sh 'curl localhost:78080/hello'
+                    }
+                 }
+                }
+            }
         stage ('Clean Up'){
            steps{
                 sh 'echo clean up'
