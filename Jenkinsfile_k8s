@@ -51,60 +51,55 @@ spec:
                 script {
                     def label = "mypod-${UUID.randomUUID().toString()}"
 
-podTemplate(label: label, containers: [
-    containerTemplate(name: 'python', image: 'python:3.7-alpine', ttyEnabled: true, command: 'cat'),
-]) {
-    node(label) {
-        stage('Get a Python project') {
-            git branch: 'develop', 
-                url: 'https://github.com/vladbronfman/abra-assignment.git',
-                changelog: false
-            container('python') {
-                stage('Code format') {
-                     sh """ python3 -m pip install flake8 || echo Failed to install flake8 ;               """  
-                     script {
-                     def out = sh(returnStdout: true, script: 'flake8 app.py || echo Flak finished with errors')
-                     echo "Output: '${out}'"
+                    podTemplate(label: label, containers: [
+                        containerTemplate(name: 'python', image: 'python:3.7-alpine', ttyEnabled: true, command: 'cat'),
+                    ]) {
+                        node(label) {
+                            stage('Get a Python project') {
+                                git branch: 'develop', 
+                                    url: 'https://github.com/vladbronfman/abra-assignment.git',
+                                    changelog: false
+                                container('python') {
+                                    stage('Code format') {
+                                         sh """ python3 -m pip install flake8 || echo Failed to install flake8 ;               """  
+                                         script {
+                                         def out = sh(returnStdout: true, script: 'flake8 app.py || echo Flak finished with errors')
+                                         echo "Output: '${out}'"
+                                        }
+                                    }
+                                    stage(' Code lint') {
+                                         sh """ python3 -m pip install pylint || echo Failed to install pylint ;               """  
+                                         script {
+                                         def out = sh(returnStdout: true, script: 'pylint app.py || echo pylint finished with errors')
+                                         echo "Output: '${out}'"
+                                        }
+                                    }
+                    
+                                    stage('Test') {
+                                        ssh """ pip install pytest  || echo Failed to install pylint ;               """ 
+                                        def out = sh(returnStdout: true, script: 'python3 -m pytest || echo pylint finished with errors')
+                                         echo "Output: '${out}'"
+                                
+                                    }
+                    
+                            }
+                        }
                     }
-                }
-                stage(' Code lint') {
-                     sh """ python3 -m pip install flake8 || echo Failed to install pylint ;               """  
-                     script {
-                     def out = sh(returnStdout: true, script: 'pylint app.py || echo pylint finished with errors')
-                     echo "Output: '${out}'"
-                    }
-                }
-
-
-        }
-    }
-}
                 }
                 
                 
             }
-        }
+        } //PreBuild
         
-        
-        
-        
-        stage('Test') {
-            steps {
-                sh 'pip install pytest '
-                sh 'python3 -m pytest'
-            }
-        }
-
-
-stage('Docker image build') {
-            steps {
-                script {
-                    img = registry + ":${env.BUILD_ID}"
-                    println ("${img}")
-                    dockerImage = docker.build("${img}")
+            stage('Docker image build') {
+                steps {
+                    script {
+                        img = registry + ":${env.BUILD_ID}"
+                        println ("${img}")
+                        dockerImage = docker.build("${img}")
+                    }
                 }
             }
-        }
         
         stage ('Clean Up'){
            steps{
