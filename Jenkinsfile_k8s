@@ -90,6 +90,7 @@ spec:
                 
             }
         } //PreBuild
+}
         
             stage('Docker image build') {
                 steps {
