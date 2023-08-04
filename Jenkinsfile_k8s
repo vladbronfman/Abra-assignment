@@ -31,7 +31,7 @@ spec:
     }
         
     environment {
-        registry = "ashishmj/python-jenkins" //To push an image to Docker Hub, you must first name your local image using your Docker Hub username and the repository name that you created through Docker Hub on the web.
+        registry = "vladbronfman/abra-assignment" //To push an image to Docker Hub, you must first name your local image using your Docker Hub username and the repository name that you created through Docker Hub on the web.
         registryCredential = 'DOCKERHUB'
         githubCredential = 'GITHUB'
     }    
@@ -46,7 +46,7 @@ spec:
         }
         
         
-        stage('Container'){
+        stage('Pre Build'){
             steps{
                 script {
                     def label = "mypod-${UUID.randomUUID().toString()}"
@@ -60,14 +60,22 @@ podTemplate(label: label, containers: [
                 url: 'https://github.com/vladbronfman/abra-assignment.git',
                 changelog: false
             container('python') {
-                stage('Flake test') {
+                stage('Code format') {
                      sh """ python3 -m pip install flake8 || echo Failed to install flake8 ;               """  
                      script {
                      def out = sh(returnStdout: true, script: 'flake8 app.py || echo Flak finished with errors')
                      echo "Output: '${out}'"
                     }
                 }
-            }
+                stage(' Code lint') {
+                     sh """ python3 -m pip install flake8 || echo Failed to install pylint ;               """  
+                     script {
+                     def out = sh(returnStdout: true, script: 'pylint app.py || echo pylint finished with errors')
+                     echo "Output: '${out}'"
+                    }
+                }
+
+
         }
     }
 }
@@ -79,34 +87,24 @@ podTemplate(label: label, containers: [
         
         
         
-        stage(' Code format') {
-            steps {
-// https://devops.stackexchange.com/questions/4557/jenkins-node-image-at-kubernetes-plugin   
-            container('shell') {
-                
-                    sh """ python3 -m pip install flake8 && flake8 app.py;
-                echo Hoho;
-                """
-            }                
-            }
-        }
-        
-         
-        
-        stage(' Code lint') {
-            steps {
-
-                sh 'pylint your_file.py'
-            }
-        }
         
         stage('Test') {
             steps {
-                sh 'python3 '
+                sh 'pip install pytest '
                 sh 'python3 -m pytest'
             }
         }
-        
+
+
+stage('Docker image build') {
+            steps {
+                script {
+                    img = registry + ":${env.BUILD_ID}"
+                    println ("${img}")
+                    dockerImage = docker.build("${img}")
+                }
+            }
+        }
         
         stage ('Clean Up'){
            steps{
