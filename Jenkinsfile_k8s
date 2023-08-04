@@ -72,6 +72,7 @@ spec:
                                          script {
                                          def out = sh(returnStdout: true, script: 'pylint app.py || echo pylint finished with errors')
                                          echo "Output: '${out}'"
+                                         if (out.contains("finished with errors")){ currentBuild.result = 'FAILURE'}
                                         }
                                     }
                     
@@ -79,6 +80,7 @@ spec:
                                         ssh """ python3 -m pip install  pytest  || echo Failed to install pytest ;               """ 
                                         def out = sh(returnStdout: true, script: 'python3 -m pytest || echo pytest finished with errors')
                                          echo "Output: '${out}'"
+                                        if (out.contains("finished with errors")){ currentBuild.result = 'FAILURE'}
                                 
                                     }
                     
