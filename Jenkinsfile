@@ -2,7 +2,14 @@
 pipeline {
     agent any
     stages {
-         
+         stage('checkout') {
+                steps {
+                git branch: 'develop',
+                credentialsId: githubCredential,
+                url: 'https://github.com/vladbronfman/abra-assignment.git'
+                }
+        }
+        
         stage('Code format') {
             steps {
 // https://devops.stackexchange.com/questions/4557/jenkins-node-image-at-kubernetes-plugin   
