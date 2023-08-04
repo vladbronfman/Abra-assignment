@@ -1,4 +1,5 @@
 FROM kodekloud/webapp-color
 WORKDIR /opt
-ENV APP_COLOR=red
+COPY ./app.py .
+ENV APP_COLOR=green
 ENTRYPOINT ["python", "app.py"]
