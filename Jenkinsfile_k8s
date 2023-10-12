@@ -1,0 +1,130 @@
+// Uses Declarative syntax to run commands inside a container.
+pipeline {
+    agent {
+        kubernetes {
+            // Rather than inline YAML, in a multibranch Pipeline you could use: yamlFile 'jenkins-pod.yaml'
+            // Or, to avoid YAML:
+            // containerTemplate {
+            //     name 'shell'
+            //     image 'ubuntu'
+            //     command 'sleep'
+            //     args 'infinity'
+            // }
+            yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: shell
+    image: ubuntu
+    command:
+    - sleep
+    args:
+    - infinity
+'''
+            // Can also wrap individual steps:
+            // container('shell') {
+            //     sh 'hostname'
+            // }
+            defaultContainer 'shell'
+        }
+    }
+        
+    environment {
+        registry = "vladbronfman/abra-assignment" //To push an image to Docker Hub, you must first name your local image using your Docker Hub username and the repository name that you created through Docker Hub on the web.
+        registryCredential = 'DOCKERHUB'
+        githubCredential = 'GITHUB'
+    }    
+        
+    stages {
+            stage('checkout') {
+                steps {
+                git branch: 'develop',
+                credentialsId: githubCredential,
+                url: 'https://github.com/vladbronfman/abra-assignment.git'
+                }
+        }
+        
+        
+        stage('Pre Build'){
+            steps{
+                script {
+                    def label = "mypod-${UUID.randomUUID().toString()}"
+
+                    podTemplate(label: label, containers: [
+                        containerTemplate(name: 'python', image: 'python:3.7-alpine', ttyEnabled: true, command: 'cat'),
+                    ]) {
+                        node(label) {
+                            stage('Get a Python project') {
+                                git branch: 'develop', 
+                                    url: 'https://github.com/vladbronfman/abra-assignment.git',
+                                    changelog: false
+                                container('python') {
+                                    stage('Code format') {
+                                         sh """ python3 -m pip install flake8 || echo Failed to install flake8 ;               """  
+                                         script {
+                                         def out = sh(returnStdout: true, script: 'flake8 app.py || echo Flak finished with errors')
+                                         echo "Output: '${out}'"
+                                        }
+                                    }
+                                    stage(' Code lint') {
+                                         sh """ python3 -m pip install pylint || echo Failed to install pylint ;               """  
+                                         script {
+                                         def out = sh(returnStdout: true, script: 'pylint app.py || echo pylint finished with errors')
+                                         echo "Output: '${out}'"
+                                         if (out.contains("finished with errors")){ currentBuild.result = 'FAILURE'}
+                                        }
+                                    }
+                    
+                                    stage('Test') {
+                                        ssh """ python3 -m pip install  pytest  || echo Failed to install pytest ;               """ 
+                                        def out = sh(returnStdout: true, script: 'python3 -m pytest || echo pytest finished with errors')
+                                         echo "Output: '${out}'"
+                                        if (out.contains("finished with errors")){ currentBuild.result = 'FAILURE'}
+                                
+                                    }
+                    
+                            }
+                        }
+                    }
+                }
+                
+                
+            }
+        } //PreBuild
+}
+        
+            stage('Docker image build') {
+                steps {
+                    script {
+                        img = registry + ":${env.BUILD_ID}"
+                        println ("${img}")
+                        dockerImage = docker.build("${img}")
+                    }
+                }
+            }
+
+            stage('Docker image test') {
+                steps {
+                    script {
+                        img = registry + ":${env.BUILD_ID}"
+                        docker.image('').withRun(' -p 78080:8080') { c ->
+                        /* Add wait to service is up */
+                        sh 'sleep 3; '
+                        /* Run curl test */
+                        sh 'curl localhost:78080/hello'
+                    }
+                 }
+                }
+            }
+        stage ('Clean Up'){
+           steps{
+                sh 'echo clean up'
+           }
+        }   
+    }
+}
+
+
+
+
