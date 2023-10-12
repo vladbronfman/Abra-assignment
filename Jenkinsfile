@@ -16,7 +16,7 @@ pipeline {
                  sh """ python3 -m pip install flake8 || echo Failed to install flake8 ;               """  
                  script {
                     def out = sh(returnStdout: true, script: 'flake8 app.py || echo Error')
-                    echo "Flake8 report: '$(out)'"
+                    echo "Flake8 report: '$(out)"
                 }    
                           
             }
