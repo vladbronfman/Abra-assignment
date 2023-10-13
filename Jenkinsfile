@@ -5,7 +5,7 @@ pipeline {
          stage('checkout') {
                 steps {
                 git branch: 'develop',
-                credentialsId: githubCredential,
+                credentialsId: 'githubCredential',
                 url: 'https://github.com/vladbronfman/abra-assignment.git'
                 }
         }
